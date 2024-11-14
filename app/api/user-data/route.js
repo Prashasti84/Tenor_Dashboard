@@ -4,8 +4,8 @@ import mongoose from 'mongoose';
 // MongoDB connection function
 async function connectToMongoDB(username) {
     try {
-        // Connect to MongoDB
-        await mongoose.connect('mongodb://localhost:27017');
+        // Connect to MongoDB using the provided connection string
+        await mongoose.connect('mongodb+srv://Prashasti84:Prashasti%4084@cluster0.qamwv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
         
         // Get data from the user-specific database
         const dbName = `tenor_database_${username}`;

@@ -41,54 +41,71 @@ export default function Dashboard() {
 };
 
 
+    // Inside your Dashboard.js component
   const fetchUserData = async () => {
     setIsLoading(true);
     setError(null);
     
-    const username = extractUsername(profileUrl);
-    if (!username) {
-      setError('Invalid URL format. Please enter a valid Tenor profile URL (e.g., https://tenor.com/users/username)');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch(`/api/user-data?username=${username}`);
-      if (!response.ok) throw new Error('Failed to fetch data');
-      
-      const data = await response.json();
-      setGifData(data.rankings);
-      
-      const totalGifs = data.rankings.length;
-      const pendingGifs = data.rankings.filter(r => r.status === 'pending').length;
-      const completedGifs = totalGifs - pendingGifs;
-      
-      setStats({
-        totalGifs,
-        pendingGifs,
-        completedGifs,
-        lastUpdate: data.rankings[0]?.last_updated || 'N/A',
-        processingStatus: 'active'
-      });
+        const username = extractUsername(profileUrl);
+        if (!username) {
+            throw new Error('Please enter a valid Tenor profile URL or username');
+        }
 
-      const rankingTrends = data.rankings
-        .sort((a, b) => new Date(a.last_updated) - new Date(b.last_updated))
-        .slice(-7)
-        .map(r => ({
-          date: r.last_updated.split('-').slice(0, 2).join('-'),
-          avgRank: r.updated_rank
-        }));
-      
-      setRankingData(rankingTrends);
+        const response = await fetch(`/api/user-data?username=${username}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to fetch data');
+        }
+
+        // Set GIF data
+        setGifData(data.rankings);
+        
+        // Update stats
+        setStats({
+            totalGifs: parseInt(data.stats.totalGifs) || 0,
+            pendingGifs: parseInt(data.stats.pendingGifs) || 0,
+            completedGifs: parseInt(data.stats.completedGifs) || 0,
+            lastUpdate: data.stats.lastUpdate,
+            processingStatus: data.stats.processingStatus
+        });
+
+        // Update ranking data with proper type checking
+        if (data.rankings?.length > 0) {
+            const trends = data.rankings
+                .slice(0, 7)
+                .map(r => ({
+                    date: r.last_updated,
+                    // Safely handle the rank value regardless of format
+                    avgRank: typeof r.updated_rank === 'string' && r.updated_rank.startsWith('#')
+                        ? parseInt(r.updated_rank.substring(1)) || 0
+                        : parseInt(r.updated_rank) || 0
+                }))
+                .filter(item => !isNaN(item.avgRank));
+            
+            setRankingData(trends);
+        } else {
+            setRankingData([]);
+        }
 
     } catch (error) {
-      setError('Error fetching data. Please try again.');
-      console.error('Error:', error);
+        console.error('Error fetching data:', error);
+        setError(error.message);
+        // Reset states
+        setGifData([]);
+        setRankingData([]);
+        setStats({
+            totalGifs: 0,
+            pendingGifs: 0,
+            completedGifs: 0,
+            lastUpdate: 'N/A',
+            processingStatus: 'error'
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
-
+};
   const exportToCSV = (dataType) => {
     let data = [];
     let filename = '';

@@ -1,15 +1,22 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 
-// MongoDB connection function
+const MONGODB_URI = 'mongodb+srv://Prashasti84:Prashasti%4084@cluster0.qamwv.mongodb.net/Cluster0?retryWrites=true&w=majority';
+
 async function connectToMongoDB(username) {
     try {
-        // Connect to MongoDB using the provided connection string
-        await mongoose.connect('mongodb+srv://Prashasti84:Prashasti%4084@cluster0.qamwv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
+        if (mongoose.connection.readyState === 1) {
+            await mongoose.connection.close();
+        }
         
-        // Get data from the user-specific database
-        const dbName = `tenor_database_${username}`;
-        return mongoose.connection.useDb(dbName);
+        const dbName = `tenor_gif_database_${username}`;
+        console.log('Connecting to database:', dbName);
+        
+        await mongoose.connect(MONGODB_URI, {
+            dbName: dbName
+        });
+        
+        return mongoose.connection.db;
     } catch (error) {
         console.error('MongoDB connection error:', error);
         throw error;
@@ -19,67 +26,87 @@ async function connectToMongoDB(username) {
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
-        const username = searchParams.get('username');
+        let username = searchParams.get('username');
         
         if (!username) {
-            return NextResponse.json({ error: 'Username is required' }, { status: 400 });
+            throw new Error('Username is required');
         }
 
-        // Connect to the specific database
+        username = username.toLowerCase().replace('https://tenor.com/users/', '');
+        
         const db = await connectToMongoDB(username);
         
-        // Get rankings from gif_rankings collection
         const rankings = await db.collection('gif_rankings')
             .find({})
-            .sort({ last_updated: -1 })
+            .sort({ _id: 1 })
             .toArray();
 
-        // Close the connection
-        await mongoose.connection.close();
+        console.log(`Found ${rankings.length} rankings for ${username}`);
 
-        // Calculate some statistics
-        const totalGifs = rankings.length;
-        const currentDate = new Date().toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        }).replace(/\//g, '-');
+        // Updated ranking transformation logic to handle all possible field names
+        const formattedRankings = rankings.map(rank => {
+            // Extract rank value checking all possible field names
+            let rankValue = null;
+            if (rank.updated_rank !== undefined) rankValue = rank.updated_rank;
+            else if (rank.current_rank !== undefined) rankValue = rank.current_rank;
+            else if (rank.rank !== undefined) rankValue = rank.rank;
+            else if (rank.position !== undefined) rankValue = rank.position;
 
-        // Transform the data if needed
-        const transformedRankings = rankings.map(ranking => ({
-            ...ranking,
-            last_updated: ranking.last_updated || currentDate,
-            current_rank: ranking.updated_rank || ranking.current_rank || 0
-        }));
+            // Format rank value
+            let formattedRank = '#NOT_FOUND';
+            if (rankValue !== null) {
+                // Convert to string and ensure # format
+                formattedRank = rankValue.toString();
+                formattedRank = formattedRank.startsWith('#') ? formattedRank : `#${formattedRank}`;
+            }
 
-        // Send the response
+            return {
+                _id: rank._id.toString(),
+                gif_url: rank.gif_url || rank.url || rank.gifUrl || '',
+                search_term: rank.search_term || rank.searchTerm || rank.term || '',
+                updated_rank: formattedRank,
+                filter_keyword: rank.filter_keyword || rank.keyword || rank.filterKeyword || '',
+                last_updated: rank.last_updated || rank.lastUpdated || rank.update_date || 
+                            new Date().toLocaleDateString('en-GB').replace(/\//g, '-')
+            };
+        });
+
+        const stats = {
+            totalGifs: formattedRankings.length.toString(),
+            pendingGifs: '0',
+            completedGifs: formattedRankings.length.toString(),
+            lastUpdate: formattedRankings[0]?.last_updated || 'N/A',
+            processingStatus: 'active'
+        };
+
+        if (mongoose.connection.readyState === 1) {
+            await mongoose.connection.close();
+        }
+
         return NextResponse.json({
             success: true,
-            rankings: transformedRankings,
-            metadata: {
-                totalGifs,
-                lastUpdate: currentDate,
-                username
-            }
+            rankings: formattedRankings,
+            stats
         });
 
     } catch (error) {
-        console.error('Error in API route:', error);
-        return NextResponse.json(
-            { error: 'Internal server error', details: error.message },
-            { status: 500 }
-        );
+        console.error('API Error:', error);
+        
+        if (mongoose.connection.readyState === 1) {
+            await mongoose.connection.close();
+        }
+
+        return NextResponse.json({
+            success: false,
+            error: error.message,
+            rankings: [],
+            stats: {
+                totalGifs: '0',
+                pendingGifs: '0',
+                completedGifs: '0',
+                lastUpdate: 'N/A',
+                processingStatus: 'error'
+            }
+        });
     }
 }
-
-// Optional: Add error handling middleware
-export function middleware(request) {
-    return NextResponse.next();
-}
-
-// Optional: Configure cors if needed
-export const config = {
-    api: {
-        externalResolver: true,
-    },
-};

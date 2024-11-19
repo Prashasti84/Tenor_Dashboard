@@ -57,7 +57,7 @@ export async function GET(request) {
             if (rankValue !== null) {
                 // Convert to string and ensure # format
                 formattedRank = rankValue.toString();
-                formattedRank = formattedRank.startsWith('#') ? formattedRank : `#${formattedRank}`;
+                formattedRank = formattedRank.startsWith('#') ? formattedRank : `${formattedRank}`;
             }
 
             return {

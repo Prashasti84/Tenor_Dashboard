@@ -302,72 +302,78 @@ export default function Dashboard() {
             </div>
         </div>
 
-          {gifData.length > 0 && (
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Recent GIF Rankings</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
-                        GIF URL
-                      </th>
-                      <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Search Term
-                      </th>
-                      <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Current Rank
-                      </th>
-                      <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Filter Keyword
-                      </th>
-                      <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
-                        Last Updated
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {gifData.map((gif, index) => (
-                      <tr key={gif._id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <a 
-                              href={gif.gif_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 truncate max-w-md hover:underline"
-                            >
-                              {gif.gif_url}
-                            </a>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-sm rounded-full bg-blue-100 text-blue-800">
-                            {gif.search_term}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                            #{gif.updated_rank}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-sm rounded-full bg-purple-100 text-purple-800">
-                            {gif.filter_keyword}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {gif.last_updated}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        {gifData.length > 0 && (
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">Recent GIF Rankings</h2>
             </div>
-          )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                      GIF URL
+                    </th>
+                    <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Search Term
+                    </th>
+                    <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Current Rank
+                    </th>
+                    <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Filter Keyword
+                    </th>
+                    <th className="px-6 py-4 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                      Last Updated
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {gifData.map((gif, index) => (
+                    <tr key={gif._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <a 
+                            href={`https://tenor.com${new URL(gif.gif_url).pathname}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 truncate max-w-md hover:underline cursor-pointer"
+                            onClick={(e) => {
+                              const pathname = new URL(gif.gif_url).pathname;
+                              const tenorUrl = `https://tenor.com${pathname}`;
+                              window.open(tenorUrl, '_blank');
+                              e.preventDefault();
+                            }}
+                          >
+                            {gif.gif_url}
+                          </a>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-sm rounded-full bg-blue-100 text-blue-800">
+                          {gif.search_term}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                          #{gif.updated_rank.replace('#', '')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-sm rounded-full bg-purple-100 text-purple-800">
+                          {gif.filter_keyword}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {gif.last_updated}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         </div>
       </div>
     </div>
